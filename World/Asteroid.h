@@ -95,6 +95,8 @@ public:
     virtual void processTurn(float time);
     virtual void finishTurn();
 
+    Q_INVOKABLE virtual void damageObject();
+
 Q_SIGNALS:
     void styleChanged();
     void semiAxisChanged();

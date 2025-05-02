@@ -52,6 +52,8 @@ public:
     virtual quint32 typeId() const;
     virtual QString namePrefix() const;
 
+    virtual void damageObject();
+
 protected:
     void setTrajectory(const QList<BezierCurve>& trajectory);
 

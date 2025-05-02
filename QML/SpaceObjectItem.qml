@@ -135,6 +135,45 @@ Item {
 
     }
 
+    Component {
+        id: destructibleComponent
+
+        AnimatedImage {
+            id: destructibleImage;
+            property bool isHighlighted: false
+            cache: false
+            property Ship ship
+            opacity: 1
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 500
+                    easing.type: Easing.InOutQuad
+                }
+            }
+            Rectangle {
+                anchors.fill: parent
+                color: "transparent"
+                border {
+                    width: 2
+                    color: "blue"
+                }
+                visible: parent.isHighlighted
+            }
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: destructibleImage.isHighlighted = true
+                onExited: destructibleImage.isHighlighted = false
+                onClicked: {
+                    destructibleImage.opacity = 0.3
+                    console.log("clicked on asteroid");
+                    object.damageObject();
+                }
+            }
+        }
+
+    }
+
     onObjectChanged: {
         objectLoader.source = "";
         objectLoader.sourceComponent = undefined;
@@ -149,7 +188,7 @@ Item {
             objectLoader.sourceComponent = defaultComponent;
             positioning = false;
         } else if (WorldManager.typeName(object.typeId) === "OpenSR::World::Asteroid") {
-            objectLoader.sourceComponent = defaultComponent;
+            objectLoader.sourceComponent = destructibleComponent;
             positioning = true;
         } else if (WorldManager.typeName(object.typeId) === "OpenSR::World::InhabitedPlanet") {
             objectLoader.sourceComponent = planetComponent;

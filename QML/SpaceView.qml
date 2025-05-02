@@ -133,7 +133,7 @@ Item {
             if (mouse.button !== Qt.LeftButton)
                 return;
 
-            mouse.accepted = true;
+            mouse.accepted = false;
             var positionInSpaceNode = mapToItem(spaceNode, mouse.x, mouse.y);
             proximityTimer.start();
             WorldManager.startShipMovement(positionInSpaceNode);

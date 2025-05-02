@@ -100,5 +100,10 @@ void SpaceObject::setTrajectory(const QList<BezierCurve>& trajectory)
 void SpaceObject::updateTrajectory()
 {
 }
+
+void SpaceObject::damageObject() {
+    qDebug() << "Not implemented: SpaceObject::damageObject().";
+}
+
 }
 }

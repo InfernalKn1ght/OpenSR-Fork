@@ -145,7 +145,7 @@ public:
     Q_INVOKABLE OpenSR::World::Ship*                Ship(OpenSR::World::WorldObject *parent = 0);
     Q_INVOKABLE OpenSR::World::SpaceStation*        SpaceStation(OpenSR::World::WorldObject *parent = 0);
 
-
+    //Q_INVOKABLE void destroyObject(WorldObject* obj);
 
 Q_SIGNALS:
     void contextChanged();

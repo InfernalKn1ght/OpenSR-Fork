@@ -33,6 +33,7 @@
 
 #include "WorldObject.h"
 #include "WorldContext.h"
+//#include "SpaceObject.h"
 
 namespace OpenSR
 {
@@ -326,6 +327,15 @@ void WorldManager::finishShipMovement()
         m_ship_animation->stop();
     }
 }
+
+// Q_INVOKABLE void WorldManager::destroyObject(WorldObject* obj) {
+//     if (obj) {
+//         SpaceObject *spaceObj = qobject_cast<SpaceObject*>(obj);
+//         if (spaceObj) {
+//             spaceObj->damageObject();
+//         }
+//     }
+// }
 
 bool WorldManager::loadWorld(const QString& path)
 {

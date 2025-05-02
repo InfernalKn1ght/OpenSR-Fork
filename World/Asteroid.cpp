@@ -330,5 +330,11 @@ void Asteroid::finishTurn()
     setTime(m_time + 1.0);
     SpaceObject::finishTurn();
 }
+
+void Asteroid::damageObject() {
+    qDebug() << "Asteroid::damageObject()";
+}
+
+
 }
 }
