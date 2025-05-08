@@ -13,6 +13,10 @@ Item {
 
     property var trajectoryView
 
+    property SpaceObjectItem playerShipItem
+    property list<SpaceObjectItem> clickables
+    property var object 
+
     anchors.fill: parent
 
     Rectangle {
@@ -82,6 +86,12 @@ Item {
             o = component.createObject(spaceNode, {
                 object: system.children[c]
             });
+
+            if(system.children[c] == WorldManager.context.playerShip){
+                playerShipItem = o;
+                console.log("Player ship item initialized:", playerShipItem);
+            }
+            
             o.entered.connect(showDebugTooltip);
             o.exited.connect(hideDebugTooltip);
             o.entered.connect(showTrajectory);
@@ -98,6 +108,46 @@ Item {
     DebugTooltip {
         id: debug
         visible: false
+    }
+
+    MouseArea {
+        id: spaceMouseOverlay
+        z: 1
+        anchors.fill: parent
+        propagateComposedEvents: true
+
+        Timer {
+            id: proximityTimer
+            interval: 100
+            repeat: true
+            running: false
+            onTriggered: {
+                context.playerShip.checkPlanetProximity(
+                    context.planetToEnter, 
+                    Qt.point(context.movementPosition.x, context.movementPosition.y), 
+                    Qt.point(playerShipItem.x, playerShipItem.y));
+            }
+        }
+
+        onClicked: {
+            if (mouse.button !== Qt.LeftButton)
+                return;
+
+            mouse.accepted = true;
+            var positionInSpaceNode = mapToItem(spaceNode, mouse.x, mouse.y);
+            proximityTimer.start();
+            WorldManager.startShipMovement(positionInSpaceNode);
+            context.movementPosition = positionInSpaceNode
+        }
+
+        Connections {
+            target: context
+
+            function onPlayerShipArrived() {
+                proximityTimer.stop();
+                context.planetToEnter = null;
+            }
+        }
     }
 
     function showTrajectory(object) {
@@ -171,30 +221,6 @@ Item {
     //         object = WorldManager.context.playerShip
     //     }
     // }
-
-    MouseArea {
-        id: spaceMouseOverlay
-        anchors.fill: parent
-        
-        propagateComposedEvents: true
-
-        onClicked: {
-            if (mouse.button !== Qt.LeftButton)
-                return;
-
-            mouse.accepted = true;
-
-            console.log("left clicked in space")
-            //console.log(World.context.playerShip)
-            
-            var positionInSpaceNode = mapToItem(spaceNode, mouse.x, mouse.y);
-
-            console.log("For parent: " + positionInSpaceNode );
-            WorldManager.startShipMovement(positionInSpaceNode);
-            
-            //playerTrajectoryView.updateTraj();
-        }
-    }
 
     MouseArea {
         id: leftHoverArea
@@ -376,6 +402,7 @@ Item {
             vAnim.stop();
         }
     }
+
 
     Button {
         id: turnButton

@@ -17,10 +17,10 @@
 */
 
 #include "WorldContext.h"
+#include "InhabitedPlanet.h"
 
 #include <QMap>
 #include <QDataStream>
-
 #include <QtQml>
 #include <qglobal.h>
 
@@ -148,7 +148,29 @@ QObject* WorldContext::findObject(const QString& name) const
 
 void WorldContext::playerShipArrivalNotify()
 {
+    m_shipIsMoving = false;
     emit playerShipArrived();
 }
+
+WorldObject* WorldContext::planetToEnter() const{
+    return m_planetToEnter;
+}
+
+void WorldContext::setPlanetToEnter(WorldObject * planet){
+    if(m_planetToEnter == planet) return;
+    m_planetToEnter = planet;
+    emit planetToEnterChanged(planet);
+}
+
+QPointF WorldContext::movementPosition() {
+    return m_planetPosition;
+}
+
+void WorldContext::setMovementPosition(const QPointF& pos) {
+    if(m_planetPosition == pos) return;
+    m_planetPosition = pos;
+    emit movementPositionChanged(pos);
+}
+
 }
 }

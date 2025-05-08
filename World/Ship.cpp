@@ -192,7 +192,7 @@ void Ship::setDestination(QPointF destination)
     }
 }
 
-void Ship::normalizeAnlge(float& deltaAngle)
+void Ship::normalizeAngle(float& deltaAngle)
 {
     while (deltaAngle > M_PI)
         deltaAngle -= 2* M_PI;
@@ -230,7 +230,7 @@ void Ship::startMovement(QPointF destination) // TODO: replace QPointF with QVec
 
 void Ship::processMovement(float time)
 {
-    qDebug() << "m_angularSpeed: " << m_angularSpeed; 
+    //qDebug() << "m_angularSpeed: " << m_angularSpeed; 
     calcAngle(time);
     calcPosition(time);
 }
@@ -239,7 +239,7 @@ void Ship::calcAngle(float dt)
 {
     initTargetAngle();
     float deltaAngle = m_targetAngle - m_angle;
-    normalizeAnlge(deltaAngle);
+    normalizeAngle(deltaAngle);
 
     if (std::abs(deltaAngle) <= dt * m_angularSpeed || m_angle == m_targetAngle)
     {
@@ -318,6 +318,28 @@ void Ship::evalTrajectoryTo(const QPointF &dest)
     qDebug() << "new trajectory length = " << traj.size();
 }
 
+
+Q_INVOKABLE void Ship::exitThePlace() {
+    emit exitPlace();
+}
+
+void Ship::checkPlanetProximity(WorldObject* planetToEnter, const QPointF &planetCenter, const QPointF &shipPosition) {
+    if(!planetToEnter) {
+        return;
+    }
+    InhabitedPlanet* planet = qobject_cast<InhabitedPlanet*>(planetToEnter);
+    int planetRadius = planet->style().radius();
+
+    const qreal distance = QLineF(shipPosition, planetCenter).length();
+    
+    if (distance <= planetRadius && !m_isNearPlanet) {
+        m_isNearPlanet = true;
+        emit enterPlace();
+    } else if (distance > planetRadius && m_isNearPlanet) {
+        m_isNearPlanet = false;
+        emit exitPlace();
+    }
+}
 
 }
 }

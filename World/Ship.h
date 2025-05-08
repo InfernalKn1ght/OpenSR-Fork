@@ -23,6 +23,7 @@
 #include "MannedObject.h"
 #include "Resource.h"
 #include <qpoint.h>
+#include "InhabitedPlanet.h"
 
 namespace OpenSR
 {
@@ -102,12 +103,18 @@ public:
   
     Q_INVOKABLE void evalTrajectoryTo(const QPointF &dest);
 
+    Q_INVOKABLE void exitThePlace();
 public slots:
     void setAffiliation(ShipAffiliation affiliation);
     void setRank(ShipRank rank);
     void setTime(float time);
     void setDestination(QPointF destination);
     void setAngle(float angle);
+    void checkPlanetProximity(
+        WorldObject* planetToEnter, 
+        const QPointF &planetCenter, 
+        const QPointF &shipPosition
+    );
 
 signals:
     void affiliationChanged(ShipAffiliation affiliation);
@@ -118,10 +125,13 @@ signals:
     void angleChanged();
     void shipArrived();
 
+    void enterPlace();
+    void exitPlace();
+
 private:
     void calcPosition(float dt = 0.0f);
     void calcAngle(float dt = 0.0f);
-    void normalizeAnlge(float& deltaAngle);
+    void normalizeAngle(float& deltaAngle);
     void initTargetAngle();
     void correctLinearSpeed();
 
@@ -135,6 +145,8 @@ private:
     float m_targetAngle;
     QPointF m_destination;
     QPointF m_start_position;
+
+    bool m_isNearPlanet = false;
 };
 }
 }
