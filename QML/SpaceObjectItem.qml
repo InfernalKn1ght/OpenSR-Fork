@@ -60,11 +60,16 @@ Item {
             property bool isWaitingForShipArrival: false
 
             MouseArea {
+                propagateComposedEvents: true
                 anchors.fill: parent
                 onDoubleClicked: {
-                    if (context.planetToEnter == null) {
+                    console.log("planet clicked");
+                    if (context.planetToEnter == null && !context.playerShip.isMoving) {
                         context.planetToEnter = planetItem.planet;
+                        console.log("planet set");
+                        isWaitingForShipArrival = true;
                     }
+                    mouse.accepted = false;
                 }
                 preventStealing: true
 
@@ -80,14 +85,14 @@ Item {
                 }
             }
 
-            Connections {
-                target: context.playerShip
+            // Connections {
+            //     target: context.playerShip
 
-                function onEnterPlace() {
-                    if(planetItem.planet == context.planetToEnter)
-                        planetItem.isWaitingForShipArrival = true;
-                }
-            }
+            //     function onEnterPlace() {
+            //         if(planetItem.planet == context.planetToEnter)
+            //             planetItem.isWaitingForShipArrival = true;
+            //     }
+            // }
 
             Connections {
                 target: context
@@ -95,7 +100,7 @@ Item {
                 function onPlayerShipArrived() {
                     if (planetItem.isWaitingForShipArrival) {
                         changeScreen("qrc:/OpenSR/PlanetView.qml", {
-                            "system": World.context.planet
+                            "planet": World.context.planetToEnter
                         });
                         planetItem.isWaitingForShipArrival = false;
                     }

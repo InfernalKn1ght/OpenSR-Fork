@@ -66,6 +66,7 @@ class OPENSR_WORLD_API Ship: public MannedObject
     Q_PROPERTY(float time READ time WRITE setTime NOTIFY timeChanged)
     Q_PROPERTY(float speed READ speed NOTIFY speedChanged STORED false)
     Q_PROPERTY(QPointF destination READ destination WRITE setDestination NOTIFY destinationChanged)
+    Q_PROPERTY(bool isMoving READ isMoving WRITE setIsMoving NOTIFY isMovingChanged)
 
 public:
     enum class ShipAffiliation {
@@ -90,6 +91,7 @@ public:
     float angularSpeed() const;
     float angle() const;
     QPointF destination() const;
+    bool isMoving() const;
 
 
     virtual quint32 typeId() const;
@@ -115,6 +117,7 @@ public slots:
         const QPointF &planetCenter, 
         const QPointF &shipPosition
     );
+    void setIsMoving(bool isMoving);
 
 signals:
     void affiliationChanged(ShipAffiliation affiliation);
@@ -124,6 +127,7 @@ signals:
     void destinationChanged();
     void angleChanged();
     void shipArrived();
+    void isMovingChanged();
 
     void enterPlace();
     void exitPlace();
@@ -145,6 +149,7 @@ private:
     float m_targetAngle;
     QPointF m_destination;
     QPointF m_start_position;
+    bool m_isMoving = false;
 
     bool m_isNearPlanet = false;
 };

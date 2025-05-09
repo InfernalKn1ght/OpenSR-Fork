@@ -147,6 +147,11 @@ QPointF Ship::destination() const
     return m_destination;
 }
 
+bool Ship::isMoving() const
+{
+    return m_isMoving;
+}
+
 void Ship::setAffiliation(Ship::ShipAffiliation affiliation)
 {
     if (m_affiliation == affiliation)
@@ -192,6 +197,15 @@ void Ship::setDestination(QPointF destination)
     }
 }
 
+void Ship::setIsMoving(bool isMoving)
+{
+    if (isMoving != m_isMoving)
+    {
+        m_isMoving = isMoving;
+        emit(isMovingChanged());
+    }
+}
+
 void Ship::normalizeAngle(float& deltaAngle)
 {
     while (deltaAngle > M_PI)
@@ -223,6 +237,7 @@ void Ship::correctLinearSpeed()
 
 void Ship::startMovement(QPointF destination) // TODO: replace QPointF with QVector2d
 {  
+    setIsMoving(true);
     m_start_position = position();
     setDestination(destination);
     correctLinearSpeed();
@@ -263,6 +278,7 @@ void Ship::calcPosition(float dt)
     {
         setPosition(m_destination);
         m_speed = CONST_SPEED;
+        setIsMoving(false);
         emit shipArrived();
     } 
     else 
