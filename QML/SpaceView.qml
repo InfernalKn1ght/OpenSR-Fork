@@ -19,7 +19,7 @@ Item {
 
     anchors.fill: parent
 
-        MouseArea {
+    MouseArea {
         id: spaceMouseOverlay
         anchors.fill: parent
 

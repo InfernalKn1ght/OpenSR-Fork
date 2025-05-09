@@ -50,7 +50,13 @@ Item {
         id: defaultComponent
         AnimatedImage {
             cache: false
+            MouseArea {
+                id: item
+                anchors.fill: parent
+                propagateComposedEvents: true
+            }
         }
+        
     }
 
     Component {
@@ -63,10 +69,8 @@ Item {
                 propagateComposedEvents: true
                 anchors.fill: parent
                 onDoubleClicked: {
-                    console.log("planet clicked");
                     if (context.planetToEnter == null && !context.playerShip.isMoving) {
                         context.planetToEnter = planetItem.planet;
-                        console.log("planet set");
                         isWaitingForShipArrival = true;
                     }
                     mouse.accepted = false;
