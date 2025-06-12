@@ -2,9 +2,9 @@ name: Code formatting and linting
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, ci-rework ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, ci-rework ]
 
 env:
   BUILD_TYPE: Debug
@@ -32,10 +32,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          version: '19'
           database: 'build'
           ignore: 'QML|data|.github|build|Engine/3rdparty|Engine/shaders|tools'
           style: 'file'
           tidy-checks: ''
+          step-summary: true
           files-changed-only: false
           tidy-review: true
           format-review: true
