@@ -24,7 +24,7 @@ jobs:
         run: cmake -G Ninja -S . -B build -DBUILD_ALL_TOOLS=Yes -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DENABLE_COVERAGE=Yes
 
       - name: Build
-        run: cmake --build build --parallel && cd /build
+        run: cmake --build build --parallel && cd build/
 
       - name: Run tests
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" ctest -VV
