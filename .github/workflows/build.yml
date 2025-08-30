@@ -30,7 +30,7 @@ jobs:
         run: cd build/ && xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" ctest -VV
 
       - name: Make coverage report
-        run: cmake --build . --target global_coverage && cd ..
+        run: cmake --build build --target global_coverage && cd ..
 
       - name: Coveralls
         uses: coverallsapp/github-action@v2
