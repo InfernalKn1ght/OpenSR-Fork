@@ -49,7 +49,7 @@ runs:
         cd build
         cmake -DBUILD_EXAMPLES=OFF -DBUILD_WITH_LOG4CPLUS=OFF -DBUILD_PROTOCOL_MESSAGEPACK=OFF ..
         cmake --build .
-        sudo cmake --install . && cd ..
+        sudo cmake --install .
 
     - name: Install Spix
       shell: bash
@@ -59,4 +59,4 @@ runs:
         mkdir build && cd build
         cmake -DSPIX_QT_MAJOR=6 -SPIX_BUILD_EXAMPLES=OFF ..
         cmake --build .
-        sudo cmake --install . && cd ..
+        sudo cmake --install .
