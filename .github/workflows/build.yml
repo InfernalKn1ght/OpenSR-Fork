@@ -26,11 +26,14 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
+      - name: Create symlinks to plugins
+        run: make -f Makefile.root other
+
       - name: Run tests
         run: cd build/ && xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" ctest -VV
 
       - name: Make coverage report
-        run: cmake --build build --target global_coverage && cd ..
+        run: cmake --build build --target global_coverage
 
       - name: Coveralls
         uses: coverallsapp/github-action@v2
