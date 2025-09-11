@@ -3,8 +3,37 @@ name: Build and test
 on:
   push:
     branches: [ master ]
+    paths:
+    - 'data/**/*.js'   
+    - 'Engine/**'
+    - 'ImagePlugin/**'
+    - 'include/**'
+    - 'QM/**'
+    - 'QML/**'
+    - 'Ranger/**'
+    - 'tests/**'
+    - 'tools/**'
+    - 'World/**'
+    - 'CMakeLists.txt'
+    - '**/CMakeLists.txt'
+    - 'opensr_setup.sh'
+
   pull_request:
     branches: [ master ]
+    paths:
+    - 'data/**/*.js'   
+    - 'Engine/**'
+    - 'ImagePlugin/**'
+    - 'include/**'
+    - 'QM/**'
+    - 'QML/**'
+    - 'Ranger/**'
+    - 'tests/**'
+    - 'tools/**'
+    - 'World/**'
+    - 'CMakeLists.txt'
+    - '**/CMakeLists.txt'
+    - 'opensr_setup.sh'
 
 env:
   BUILD_TYPE: Debug

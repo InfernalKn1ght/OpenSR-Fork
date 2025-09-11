@@ -3,8 +3,35 @@ name: Code coverage
 on:
   push:
     branches: [ master ]
+    paths:
+    - 'data/**/*.js'  
+    - 'Engine/**'
+    - 'ImagePlugin/**'
+    - 'include/**'
+    - 'QM/**'
+    - 'QML/**'
+    - 'Ranger/**'
+    - 'tests/**'
+    - 'tools/**'
+    - 'World/**'
+    - 'CMakeLists.txt'
+    - '**/CMakeLists.txt'
+
   pull_request:
     branches: [ master ]
+    paths:
+    - 'data/**/*.js'   
+    - 'Engine/**'
+    - 'ImagePlugin/**'
+    - 'include/**'
+    - 'QM/**'
+    - 'QML/**'
+    - 'Ranger/**'
+    - 'tests/**'
+    - 'tools/**'
+    - 'World/**'
+    - 'CMakeLists.txt'
+    - '**/CMakeLists.txt'
 
 env:
   BUILD_TYPE: Debug
