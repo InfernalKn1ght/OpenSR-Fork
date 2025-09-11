@@ -77,6 +77,7 @@ public:
     QUrl startupScript;
     QUrl mainQML;
     bool running = false;
+    bool testMode = false;
 };
 
 Engine::Engine(int &argc, char **argv) : QApplication(argc, argv), d_osr_ptr(new EnginePrivate())
@@ -95,6 +96,14 @@ Engine::Engine(int &argc, char **argv) : QApplication(argc, argv), d_osr_ptr(new
 
     d->qmlEngine->globalObject().setProperty("Engine", d->qmlEngine->newQObject(this));
     d->qmlEngine->setObjectOwnership(this, QQmlEngine::CppOwnership);
+    d->qmlEngine->rootContext()->setContextProperty("isTestMode", false);
+
+    d->testMode = arguments().contains("--test-mode");
+
+    if (d->testMode)
+    {
+        d->qmlEngine->rootContext()->setContextProperty("isTestMode", true);
+    }
 }
 
 Engine::~Engine()
@@ -146,7 +155,13 @@ int Engine::run()
 
     auto scriptExec = [this] {
         Q_D(Engine);
-        if (!d->startupScript.isEmpty())
+
+        if (d->testMode)
+        {
+            execScript(QUrl("res:/opensrTestMode.js"));
+            return;
+        }
+        if (!d->startupScript.isEmpty() && !d->testMode)
         {
             execScript(d->startupScript);
         }
@@ -178,7 +193,8 @@ void Engine::showQMLComponent(const QString &url)
 
     for (auto root : d->qmlEngine->rootObjects())
     {
-        QMetaObject::invokeMethod(root, "destroyAndChangeScreen", Q_ARG(QVariant, QUrl(url)), Q_ARG(QVariant, QVariantMap()));
+        QMetaObject::invokeMethod(root, "destroyAndChangeScreen", Q_ARG(QVariant, QUrl(url)),
+                                  Q_ARG(QVariant, QVariantMap()));
     }
 }
 

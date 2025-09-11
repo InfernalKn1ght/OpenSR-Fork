@@ -22,6 +22,7 @@
 #include "OpenSR/ResourceManager.h"
 
 #include <OpenSR/libRangerQt.h>
+#include <QDir>
 #include <QNetworkReply>
 
 class QFile;

@@ -1,10 +1,10 @@
-name: Build and test
+name: Code coverage
 
 on:
   push:
     branches: [ master ]
     paths:
-    - 'data/**/*.js'   
+    - 'data/**/*.js'  
     - 'Engine/**'
     - 'ImagePlugin/**'
     - 'include/**'
@@ -16,7 +16,6 @@ on:
     - 'World/**'
     - 'CMakeLists.txt'
     - '**/CMakeLists.txt'
-    - 'opensr_setup.sh'
 
   pull_request:
     branches: [ master ]
@@ -33,7 +32,6 @@ on:
     - 'World/**'
     - 'CMakeLists.txt'
     - '**/CMakeLists.txt'
-    - 'opensr_setup.sh'
 
 env:
   BUILD_TYPE: Debug
@@ -50,7 +48,7 @@ jobs:
         uses: ./.github/actions/install-dependencies-composite-action
 
       - name: Configure CMake
-        run: cmake -G Ninja -S . -B build -DBUILD_ALL_TOOLS=Yes -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DBUILD_TESTS=Yes
+        run: cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=g++ -DBUILD_ALL_TOOLS=Yes -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DENABLE_COVERAGE=Yes
 
       - name: Build
         run: cmake --build build --parallel $(nproc)
@@ -58,5 +56,11 @@ jobs:
       - name: Create symlinks to plugins
         run: ./opensr_setup.sh -t demo
 
-      - name: Run tests
-        run: cd build/ && xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" ctest -VV
+      - name: Make coverage report
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" cmake --build build --target global_coverage
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+        with: 
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/coverage/coverage.json

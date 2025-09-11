@@ -1,4 +1,5 @@
-import QtQuick 2.3
+import QtQuick
+import QtQuick.Controls
 import OpenSR 1.0
 import OpenSR.World 1.0
 
@@ -17,7 +18,63 @@ Item {
     property list<SpaceObjectItem> clickables
     property var object
 
+    property bool testConfig: isTestMode
+
     anchors.fill: parent
+    focus: true
+
+    Popup {
+        id: escapeMenu
+        width: parent.width * 0.3
+        height: parent.height * 0.4
+        anchors.centerIn: parent
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: "#202020"
+            border.color: "#505050"
+            radius: 5
+        }
+
+        Column {
+            anchors.fill: parent
+            anchors.margins: 10
+            spacing: 10
+
+            Text {
+                text: "Menu"
+                color: "white"
+                font.bold: true
+                font.pixelSize: 20
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Button {
+                id: continueButton
+                text: "Continue"
+                width: parent.width
+                onClicked: escapeMenu.close()
+            }
+
+            Button {
+                id: exitButton
+                text: "Exit to main menu"
+                width: parent.width
+                onClicked: exitToMenu()
+            }
+        }
+    }
+
+    Keys.onEscapePressed: event => {
+        if (escapeMenu.opened) {
+            escapeMenu.close();
+        } else {
+            escapeMenu.open();
+        }
+        event.accepted = true;
+    }
 
     MouseArea {
         id: spaceMouseOverlay
@@ -59,8 +116,9 @@ Item {
         y: parent.height / 2
 
         Image {
+            visible: !testConfig
             id: bg
-            source: system ? system.style.background : ""
+            source: testConfig ? "" : system.style.background
             x: -width / 2
             y: -height / 2
             cache: false
@@ -73,6 +131,7 @@ Item {
     }
 
     Item {
+        visible: !testConfig 
         id: radarView
         anchors.right: parent.right
         anchors.top: parent.top
@@ -81,7 +140,7 @@ Item {
         height: width
 
         Image {
-            source: "res:/DATA/PanelSpace2/1RadarA.gi"
+            source: testConfig ? "" : "res:/DATA/PanelSpace2/1RadarA.gi"
             anchors.fill: parent
             cache: true
         }
@@ -89,9 +148,9 @@ Item {
             id: radarCenterButton
             anchors.bottom: parent.bottom
             anchors.right: parent.right
-            normalImage: "res:/DATA/PanelSpace2/1CenterN.gi"
-            hoveredImage: "res:/DATA/PanelSpace2/1CenterA.gi"
-            downImage: "res:/DATA/PanelSpace2/1CenterD.gi"
+            normalImage: testConfig ? "" : "res:/DATA/PanelSpace2/1CenterN.gi"
+            hoveredImage: testConfig ? "" : "res:/DATA/PanelSpace2/1CenterA.gi"
+            downImage: testConfig ? "" : "res:/DATA/PanelSpace2/1CenterD.gi"
             onClicked: console.log("Centering not implemented")
         }
     }
@@ -100,9 +159,6 @@ Item {
         for (var i in spaceNode.children) {
             spaceNode.children[i].destroy();
         }
-
-        if (!system)
-            return;
 
         var component = Qt.createComponent("SpaceObjectItem.qml");
 
@@ -394,5 +450,10 @@ Item {
             WorldManager.startTurn();
             hideTrajectory(context.playerShip);
         }
+    }
+
+    function exitToMenu() {
+        view.destroy();
+        changeScreen("qrc:/OpenSR/MainMenu.qml");
     }
 }
