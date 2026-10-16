@@ -153,6 +153,7 @@ QSGNode *GAIAnimatedImage::updatePaintNode(QSGNode *oldNode, QQuickItem::UpdateP
         if (!d->m_loaded)
         {
             d->m_sourceChanged = false;
+            d->m_fileChanged = false;
             return nullptr;
         }
 
@@ -168,8 +169,11 @@ QSGNode *GAIAnimatedImage::updatePaintNode(QSGNode *oldNode, QQuickItem::UpdateP
 
     if (d->m_fileChanged)
     {
-        material->setTexture(d->m_textures[d->m_currentFile]);
-        node->markDirty(QSGNode::DirtyMaterial);
+        if (d->m_currentFile >= 0 && static_cast<size_t>(d->m_currentFile) < d->m_textures.size())
+        {
+            material->setTexture(d->m_textures[d->m_currentFile]);
+            node->markDirty(QSGNode::DirtyMaterial);
+        }
         d->m_fileChanged = false;
     }
 

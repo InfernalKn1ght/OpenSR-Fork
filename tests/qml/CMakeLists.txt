@@ -2,7 +2,7 @@ LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 find_package(Qt6 COMPONENTS Core Quick Widgets REQUIRED)
 find_package(GTest REQUIRED)
-find_package(Spix COMPONENTS Core QtQuick REQUIRED)
+find_package(Spix REQUIRED)
 
 add_executable(opensr_ui_test main.cpp ErrorCollector.cpp ErrorCollector.h SpixOSRTest.cpp SpixOSRTest.h ${CMAKE_SOURCE_DIR}/QML/qml.qrc)
 
