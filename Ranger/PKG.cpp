@@ -28,12 +28,18 @@ struct PKGDirHeader
     uint32_t zero2;
 };
 
-PKGItem *loadItems(QIODevice *dev, PKGItem *previous)
+PKGItem *loadItems(QIODevice *dev, PKGItem *previous, int depth = 0)
 {
     uint32_t zero{};
     PKGDirHeader dir{};
 
     PKGItem *result = 0;
+
+    // Guard against corrupted archives that would otherwise recurse forever.
+    if (depth > 64)
+    {
+        return 0;
+    }
 
     if (!previous)
     {
@@ -50,6 +56,18 @@ PKGItem *loadItems(QIODevice *dev, PKGItem *previous)
 
     dev->seek(previous->offset);
     dev->read((char *)&dir, sizeof(PKGDirHeader));
+
+    // Each directory entry occupies 158 bytes; reject a count that could not
+    // possibly fit in the remaining data to avoid a huge allocation on corrupt
+    // input.
+    if (!dev->isSequential())
+    {
+        const qint64 maxItems = dev->bytesAvailable() / 158 + 1;
+        if (static_cast<qint64>(dir.itemsCount) > maxItems)
+        {
+            dir.itemsCount = static_cast<uint32_t>(maxItems);
+        }
+    }
 
     previous->childCount = dir.itemsCount;
     previous->childs = new PKGItem[dir.itemsCount];
@@ -78,7 +96,7 @@ PKGItem *loadItems(QIODevice *dev, PKGItem *previous)
 
         if (item.dataType == 3)
         {
-            loadItems(dev, &previous->childs[i]);
+            loadItems(dev, &previous->childs[i], depth + 1);
         }
     }
 
@@ -102,16 +120,32 @@ QByteArray extractFile(const PKGItem &item, QIODevice *dev)
     if (item.dataType == 2)
     {
         uint32_t outsize = item.size;
-        uint32_t bufsize{};
         uint32_t done = 0;
         dev->seek(item.offset + 4);
 
         while (done < outsize)
         {
             uint32_t bufsize{};
-            dev->read((char *)&bufsize, 4);
+            // Truncated file: no more chunk headers to read.
+            if (dev->read((char *)&bufsize, 4) != 4)
+            {
+                break;
+            }
+
+            // Refuse absurd/corrupt sizes instead of attempting a huge allocation.
+            if (bufsize == 0 || static_cast<qint64>(bufsize) > dev->bytesAvailable())
+            {
+                break;
+            }
+
             QByteArray d = dev->read(bufsize);
             QByteArray r = unpackZL(d);
+            if (r.isEmpty())
+            {
+                // Corrupt chunk: bail out rather than spin forever.
+                break;
+            }
+
             result += r;
             done += r.size();
         }

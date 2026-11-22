@@ -17,6 +17,7 @@
 */
 
 #include "OpenSR/QM/QM.h"
+#include <QDebug>
 #include <QIODevice>
 #include <QString>
 #include <cstdint>
@@ -29,7 +30,16 @@ QString readString(QIODevice *dev)
 {
     uint32_t len{};
     dev->read((char *)&len, 4);
-    return QString::fromUtf16((char16_t *)dev->read(static_cast<qint64>(len) * 2).constData(), len); // check later
+
+    const qint64 expectedBytes = static_cast<qint64>(len) * 2;
+    QByteArray data = dev->read(expectedBytes);
+
+    if (data.size() != expectedBytes)
+    {
+        qWarning() << "QM: truncated string, expected" << len << "UTF-16 code units but got" << (data.size() / 2);
+    }
+
+    return QString::fromUtf16(reinterpret_cast<const char16_t *>(data.constData()), data.size() / 2);
 }
 
 void skipString(QIODevice *dev)

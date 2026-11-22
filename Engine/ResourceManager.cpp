@@ -151,7 +151,7 @@ QNetworkReply *ResourceManagerNAM::createRequest(Operation op, const QNetworkReq
     QUrl url = req.url();
     QString scheme = url.scheme();
     if ((scheme.compare("res", Qt::CaseInsensitive) == 0) ||
-        (scheme.compare("dat", Qt::CaseInsensitive) == 0) && (op == QNetworkAccessManager::GetOperation))
+        ((scheme.compare("dat", Qt::CaseInsensitive) == 0) && (op == QNetworkAccessManager::GetOperation)))
     {
         QIODevice *dev = m_manger->getIODevice(url);
         ResourceReply *reply = new ResourceReply(url, dev, this);
@@ -358,11 +358,17 @@ QIODevice *ResourceManager::getIODevice(const QUrl &path, QObject *parent)
     QString p = path.path();
     if (!path.scheme().compare("dat", Qt::CaseInsensitive))
     {
-        if (p.at(0) == '/')
+        if (p.startsWith('/'))
         {
             p.remove(0, 1);
         }
-        p = qobject_cast<Engine *>(qApp)->datValue(p).toString();
+
+        Engine *engine = qobject_cast<Engine *>(qApp);
+        if (!engine)
+        {
+            return 0;
+        }
+        p = engine->datValue(p).toString();
         p = p.replace("\\", "/");
     }
     return getIODevice(p, parent);

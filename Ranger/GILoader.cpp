@@ -814,6 +814,19 @@ QImage loadGIFrame(QIODevice *dev, bool animation, const QImage &background, int
     qint64 offset = dev->pos();
     dev->read((char *)&image, sizeof(GIFrameHeader));
 
+    // Reject corrupt layer counts before allocating: zero makes the per-type
+    // loaders fail anyway, and an enormous count would exhaust memory.
+    if (image.layerCount == 0)
+    {
+        return QImage();
+    }
+
+    const qint64 maxLayers = dev->bytesAvailable() / static_cast<qint64>(sizeof(GILayerHeader)) + 1;
+    if (static_cast<qint64>(image.layerCount) > maxLayers)
+    {
+        return QImage();
+    }
+
     layers = new GILayerHeader[image.layerCount];
 
     for (int i = 0; i < image.layerCount; i++)

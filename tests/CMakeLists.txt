@@ -1,5 +1,6 @@
 if(BUILD_TESTS)
     add_subdirectory(World)
+    add_subdirectory(QM)
 
     if(EXISTS ${CMAKE_SOURCE_DIR}/cmake/modules/FindAnyRPC.cmake)
         add_subdirectory(qml)

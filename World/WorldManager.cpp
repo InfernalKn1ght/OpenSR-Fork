@@ -339,18 +339,24 @@ bool WorldManager::loadWorld(const QString &path)
 
     // Context is always first
     stream >> h;
-    m_context = qobject_cast<WorldContext *>(createObject(objects, headersMap, h));
-    m_context->setParent(this);
-    emit(contextChanged());
-
-    if (!m_context)
+    WorldObject *contextObject = createObject(objects, headersMap, h);
+    if (!contextObject)
     {
-        qWarning() << "Invalid save file";
+        qWarning() << "Invalid save file: no world context.";
         f.close();
         return false;
     }
+    m_context = qobject_cast<WorldContext *>(contextObject);
+    if (!m_context)
+    {
+        qWarning() << "Invalid save file: context object has wrong type.";
+        f.close();
+        return false;
+    }
+    m_context->setParent(this);
+    emit(contextChanged());
 
-    for (int i = 0; i < objectCount - 1; i++)
+    for (quint32 i = 0; i + 1 < objectCount; i++)
     {
         stream >> h;
         headersMap[h.id] = h;
@@ -368,7 +374,7 @@ bool WorldManager::loadWorld(const QString &path)
         }
     }
 
-    for (int i = 0; i < objectCount; i++)
+    for (quint32 i = 0; i < objectCount; i++)
     {
         quint32 sig{}, id{};
         stream >> sig;
@@ -409,7 +415,7 @@ bool WorldManager::saveWorld(const QString &path)
     countObjects(objects, m_context);
 
     stream << SAVE_FILE_SIGNATURE;
-    stream << objects.count();
+    stream << static_cast<quint32>(objects.count());
 
     for (WorldObject *o : objects)
     {

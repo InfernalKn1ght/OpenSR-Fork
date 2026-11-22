@@ -29,7 +29,35 @@ namespace QM
 namespace
 {
 const uint8_t PRECEDENCES[23] = {0, 0, 0, 0, 6, 6, 8, 7, 8, 3, 3, 3, 3, 3, 3, 1, 2, 9, 4, 5, 0, 0, 8};
+
+// Bounds-checked character access. QString::operator[] asserts when the index
+// equals the size, which happens routinely while tokenizing a truncated
+// expression such as "[5".
+inline QChar charAt(const QString &s, qsizetype i)
+{
+    return (i >= 0 && i < s.size()) ? s.at(i) : QChar();
 }
+
+// Sample a random integer in [from, to] inclusive. Defends against a
+// reversed or degenerate range (to < from) which would otherwise yield a
+// zero/negative modulus and crash with SIGFPE on `rand() % 0`.
+float randomInRange(float from, float to)
+{
+    double span = static_cast<double>(to) - static_cast<double>(from) + 1.0;
+    if (span <= 0.0)
+    {
+        return from;
+    }
+
+    uint32_t count = static_cast<uint32_t>(span);
+    if (count == 0)
+    {
+        count = 1;
+    }
+
+    return from + static_cast<float>(rand() % count);
+}
+} // namespace
 
 Token::Token() : type(TOKEN_NONE), value{}
 {
@@ -56,7 +84,7 @@ Token Token::apply(const Token &a, const Token &b, const QMap<uint32_t, float> &
 
     if (a.type == TOKEN_RANGE)
     {
-        av = a.value.from + static_cast<float>(rand() % (uint32_t)(a.value.to - a.value.from + 1));
+        av = randomInRange(a.value.from, a.value.to);
     }
     else if (a.type == TOKEN_LIST)
     {
@@ -73,7 +101,7 @@ Token Token::apply(const Token &a, const Token &b, const QMap<uint32_t, float> &
 
     if (b.type == TOKEN_RANGE)
     {
-        bv = b.value.from + static_cast<float>(rand() % (uint32_t)(b.value.to - b.value.from + 1));
+        bv = randomInRange(b.value.from, b.value.to);
     }
     else if (b.type == TOKEN_LIST)
     {
@@ -108,7 +136,11 @@ Token Token::apply(const Token &a, const Token &b, const QMap<uint32_t, float> &
     case TOKEN_OP_DIV:
         return Token(av / bv);
     case TOKEN_OP_INT_DIV:
-        return Token(static_cast<float>(iAv) / static_cast<float>(iBv));
+        if (iBv == 0)
+        {
+            return Token(0.0f);
+        }
+        return Token(static_cast<float>(iAv / iBv));
     case TOKEN_OP_MULTIPLY:
         return Token(av * bv);
     case TOKEN_OP_MOD:
@@ -174,39 +206,52 @@ Token Token::apply(const Token &a, const Token &b, const QMap<uint32_t, float> &
         {
             return Token(av == bv);
         }
+    default:
+        return *this;
     }
 }
 
-int32_t getInt(int &pos, QString &exp)
+int32_t getInt(int &pos, const QString &exp)
 {
-    size_t offset = 0;
-    const QChar *s = exp.constData() + pos;
-    while (*s != '\0' && (s->isDigit() || *s == '-'))
+    const qsizetype start = pos;
+
+    // A '-' is only a sign here; consuming it greedily (as before) turned
+    // "10-3" into the single invalid token "10-3" which converts to 0.
+    if (pos < exp.size() && exp[pos] == '-')
     {
-        s++;
-        offset++;
+        pos++;
     }
-    int32_t res = exp.sliced(pos, static_cast<qsizetype>(offset)).toInt();
-    pos += static_cast<int>(offset);
-    return res;
+
+    while (pos < exp.size() && exp[pos].isDigit())
+    {
+        pos++;
+    }
+
+    return exp.sliced(start, pos - start).toInt();
 }
 
 float getFloat(int &pos, const QString &exp)
 {
-    size_t offset = 0;
-    const QChar *s = exp.constData() + pos;
+    const qsizetype start = pos;
     bool wasPoint = false;
-    while (*s != '\0' && (s->isDigit() || *s == '-' || (*s == '.' && !wasPoint)))
+
+    if (pos < exp.size() && exp[pos] == '-')
     {
-        if (*s == '.')
+        pos++;
+    }
+
+    while (pos < exp.size() && (exp[pos].isDigit() || (exp[pos] == '.' && !wasPoint)))
+    {
+        if (exp[pos] == '.')
         {
             wasPoint = true;
         }
-        s++;
-        offset++;
+        pos++;
     }
-    int32_t res = exp.sliced(pos, static_cast<qsizetype>(offset)).toInt();
-    pos += static_cast<int>(offset);
+
+    // Parse the token as a floating point value: integer literals stay
+    // exact and fractional literals like "2.5" are no longer truncated to 0.
+    double res = exp.sliced(start, pos - start).toDouble();
     return static_cast<float>(res);
 }
 
@@ -223,7 +268,7 @@ QList<Token> tokenize(const QString &expression)
 
     while (pos < exp.length())
     {
-        while ((pos < exp.length()) && (exp[pos].isSpace()))
+        while ((pos < exp.length()) && (charAt(exp, pos).isSpace()))
         {
             pos++;
         }
@@ -234,50 +279,51 @@ QList<Token> tokenize(const QString &expression)
 
         Token t;
         // FIXME: Ugly unary minus detection.
-        if ((exp[pos].isDigit()) || ((exp[pos] == '-') && (prev.type != Token::TOKEN_NUMBER) &&
-                                     (prev.type != Token::TOKEN_RANGE) && (prev.type != Token::TOKEN_PARAMETER) &&
-                                     (prev.type != Token::TOKEN_LIST) && (prev.type != Token::TOKEN_CLOSE_PAR)))
+        if ((charAt(exp, pos).isDigit()) ||
+            ((charAt(exp, pos) == '-') && (prev.type != Token::TOKEN_NUMBER) && (prev.type != Token::TOKEN_RANGE) &&
+             (prev.type != Token::TOKEN_PARAMETER) && (prev.type != Token::TOKEN_LIST) &&
+             (prev.type != Token::TOKEN_CLOSE_PAR)))
         {
             t = Token(getFloat(pos, exp));
         }
-        else if (exp[pos] == '-')
+        else if (charAt(exp, pos) == '-')
         {
             t.type = Token::TOKEN_OP_MINUS;
             pos++;
         }
-        else if (exp[pos] == '+')
+        else if (charAt(exp, pos) == '+')
         {
             t.type = Token::TOKEN_OP_PLUS;
             pos++;
         }
-        else if (exp[pos] == '*')
+        else if (charAt(exp, pos) == '*')
         {
             t.type = Token::TOKEN_OP_MULTIPLY;
             pos++;
         }
-        else if (exp[pos] == '/')
+        else if (charAt(exp, pos) == '/')
         {
             t.type = Token::TOKEN_OP_DIV;
             pos++;
         }
-        else if (exp[pos] == '(')
+        else if (charAt(exp, pos) == '(')
         {
             t.type = Token::TOKEN_OPEN_PAR;
             pos++;
         }
-        else if (exp[pos] == ')')
+        else if (charAt(exp, pos) == ')')
         {
             t.type = Token::TOKEN_CLOSE_PAR;
             pos++;
         }
-        else if (exp[pos] == '=')
+        else if (charAt(exp, pos) == '=')
         {
             t.type = Token::TOKEN_EQUAL;
             pos++;
         }
-        else if (exp[pos] == '>')
+        else if (charAt(exp, pos) == '>')
         {
-            if (exp[pos + 1] == '=')
+            if (charAt(exp, pos + 1) == '=')
             {
                 t.type = Token::TOKEN_MORE_EQUAL;
                 pos += 2;
@@ -288,14 +334,14 @@ QList<Token> tokenize(const QString &expression)
                 pos++;
             }
         }
-        else if (exp[pos] == '<')
+        else if (charAt(exp, pos) == '<')
         {
-            if (exp[pos + 1] == '=')
+            if (charAt(exp, pos + 1) == '=')
             {
                 t.type = Token::TOKEN_LESS_EQUAL;
                 pos += 2;
             }
-            else if (exp[pos + 1] == '>')
+            else if (charAt(exp, pos + 1) == '>')
             {
                 t.type = Token::TOKEN_NOT_EQUAL;
                 pos += 2;
@@ -306,35 +352,35 @@ QList<Token> tokenize(const QString &expression)
                 pos++;
             }
         }
-        else if (exp[pos] == '[')
+        else if (charAt(exp, pos) == '[')
         {
-            if (exp[pos + 1] == 'p')
+            if (charAt(exp, pos + 1) == 'p')
             {
                 pos += 2;
                 t.type = Token::TOKEN_PARAMETER;
                 t.value.id = (uint32_t)getInt(pos, exp);
-                if (exp[pos] != ']')
+                if (charAt(exp, pos) != ']')
                 {
                     qWarning() << "Unclosed parameter token in \"" << exp << "\"";
                     return QList<Token>();
                 }
                 pos++;
             }
-            else if ((exp[pos + 1].isDigit()) || ((exp[pos + 1] == '-')))
+            else if ((charAt(exp, pos + 1).isDigit()) || ((charAt(exp, pos + 1) == '-')))
             {
                 pos++;
                 float v1{}, v2{};
                 v1 = getFloat(pos, exp);
-                if (exp[pos] == ']')
+                if (charAt(exp, pos) == ']')
                 {
                     t = Token(v1);
                     pos++;
                 }
-                else if ((exp[pos] == '.') || (exp[pos] == 'h'))
+                else if ((charAt(exp, pos) == '.') || (charAt(exp, pos) == 'h'))
                 {
                     pos++;
                     v2 = getFloat(pos, exp);
-                    if (exp[pos] != ']')
+                    if (charAt(exp, pos) != ']')
                     {
                         qWarning() << "Invalid range token in \"" << exp << "\" at pos = " << pos;
                         return QList<Token>();
@@ -342,21 +388,26 @@ QList<Token> tokenize(const QString &expression)
                     t = Token(v1, v2);
                     pos++;
                 }
-                else if (exp[pos] == ';')
+                else if (charAt(exp, pos) == ';')
                 {
                     t.type = Token::TOKEN_LIST;
                     t.list.push_back(v1);
-                    while (exp[pos] == ';')
+                    while (charAt(exp, pos) == ';')
                     {
                         pos++;
                         t.list.push_back(getFloat(pos, exp));
                     }
-                    if (exp[pos] != ']')
+                    if (charAt(exp, pos) != ']')
                     {
                         qWarning() << "Unclosed list token in \"" << exp << "\"";
                         return QList<Token>();
                     }
                     pos++;
+                }
+                else
+                {
+                    qWarning() << "Invalid range token in \"" << exp << "\" at pos = " << pos;
+                    return QList<Token>();
                 }
             }
             else
@@ -365,37 +416,37 @@ QList<Token> tokenize(const QString &expression)
                 return QList<Token>();
             }
         }
-        else if (exp.sliced(pos, 3) == "mod")
+        else if (exp.mid(pos, 3) == "mod")
         {
             t.type = Token::TOKEN_OP_MOD;
             pos += 3;
         }
-        else if (exp.sliced(pos, 3) == "div")
+        else if (exp.mid(pos, 3) == "div")
         {
             t.type = Token::TOKEN_OP_INT_DIV;
             pos += 3;
         }
-        else if (exp.sliced(pos, 3) == "and")
+        else if (exp.mid(pos, 3) == "and")
         {
             t.type = Token::TOKEN_AND;
             pos += 3;
         }
-        else if (exp.sliced(pos, 3) == "not")
+        else if (exp.mid(pos, 3) == "not")
         {
             t.type = Token::TOKEN_NOT;
             pos += 3;
         }
-        else if (exp.sliced(pos, 2) == "or")
+        else if (exp.mid(pos, 2) == "or")
         {
             t.type = Token::TOKEN_OR;
             pos += 2;
         }
-        else if (exp.sliced(pos, 2) == "to")
+        else if (exp.mid(pos, 2) == "to")
         {
             t.type = Token::TOKEN_TO;
             pos += 2;
         }
-        else if (exp.sliced(pos, 2) == "in")
+        else if (exp.mid(pos, 2) == "in")
         {
             t.type = Token::TOKEN_IN;
             pos += 2;
@@ -570,6 +621,12 @@ float eval(const QList<Token> &exp, const QMap<uint32_t, float> &parameters)
         }
         else
         {
+            // Malformed expression: an operator without enough operands.
+            if (opStack.size() < 2)
+            {
+                qWarning() << "Malformed expression: not enough operands for operator.";
+                return 0;
+            }
             Token b = opStack.top();
             opStack.pop();
             Token a = opStack.top();
@@ -577,6 +634,12 @@ float eval(const QList<Token> &exp, const QMap<uint32_t, float> &parameters)
             opStack.push(t.apply(a, b, parameters));
         }
     }
+
+    if (opStack.isEmpty())
+    {
+        return 0;
+    }
+
     Token r = opStack.top();
 
     if (r.type == Token::TOKEN_PARAMETER)
@@ -585,7 +648,7 @@ float eval(const QList<Token> &exp, const QMap<uint32_t, float> &parameters)
     }
     else if (r.type == Token::TOKEN_RANGE)
     {
-        return r.value.from + static_cast<float>((rand() % (uint32_t)(r.value.to - r.value.from + 1)));
+        return randomInRange(r.value.from, r.value.to);
     }
     else if (r.type == Token::TOKEN_LIST)
     {

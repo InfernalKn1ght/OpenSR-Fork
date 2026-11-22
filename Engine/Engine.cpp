@@ -56,7 +56,7 @@ void mergeMap(QVariantMap &source, const QVariantMap &append)
         }
         else
         {
-            *target = append;
+            *target = i.value();
         }
     }
 }

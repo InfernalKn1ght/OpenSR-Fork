@@ -60,7 +60,7 @@ QVariant GAIAnimationIO::option(ImageOption option) const
     if (option == QImageIOHandler::Size)
     {
         return QSize(static_cast<int>(header.finishX - header.startX),
-                     static_cast<int>(header.finishY - header.startX));
+                     static_cast<int>(header.finishY - header.startY));
     }
 
     return QVariant();
@@ -139,7 +139,7 @@ bool GAIAnimationIO::read(QImage *image)
 
     m_prev = *image;
 
-    return true;
+    return !image->isNull();
 }
 
 int GAIAnimationIO::currentImageNumber() const

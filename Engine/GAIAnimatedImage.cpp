@@ -214,7 +214,12 @@ void GAIAnimatedImage::GAIAnimatedImagePrivate::loadGAI(const QUrl &source)
     }
     else
     {
-        dev = (dynamic_cast<Engine *> qApp)->resources()->getIODevice(path);
+        Engine *engine = dynamic_cast<Engine *>(qApp);
+        if (!engine)
+        {
+            return;
+        }
+        dev = engine->resources()->getIODevice(path);
     }
     if (!dev)
     {
@@ -224,10 +229,28 @@ void GAIAnimatedImage::GAIAnimatedImagePrivate::loadGAI(const QUrl &source)
     if (!checkGAIHeader(dev))
     {
         dev->close();
+        delete dev;
         return;
     }
 
     GAIHeader header = readGAIHeader(dev);
+
+    if (header.frameCount == 0)
+    {
+        dev->close();
+        delete dev;
+        return;
+    }
+
+    // The per-frame seek table must fit in the file; reject corrupt counts
+    // before allocating (frameCount is attacker/corruption controlled).
+    const qint64 seekTableSize = static_cast<qint64>(header.frameCount) * 2 * sizeof(quint32);
+    if (dev->size() > 0 && seekTableSize > dev->size())
+    {
+        dev->close();
+        delete dev;
+        return;
+    }
 
     QVector<int> times = loadGAITimes(dev, header);
 
@@ -241,12 +264,16 @@ void GAIAnimatedImage::GAIAnimatedImagePrivate::loadGAI(const QUrl &source)
     }
     else
     {
-        QIODevice *bgDev = (dynamic_cast<Engine *> qApp)->resources()->getIODevice(bgPath);
-        if (bgDev)
+        Engine *engine = dynamic_cast<Engine *>(qApp);
+        if (engine)
         {
-            background = QImageReader(bgDev).read();
-            bgDev->close();
-            delete bgDev;
+            QIODevice *bgDev = engine->resources()->getIODevice(bgPath);
+            if (bgDev)
+            {
+                background = QImageReader(bgDev).read();
+                bgDev->close();
+                delete bgDev;
+            }
         }
     }
 
@@ -329,7 +356,17 @@ void GAIAnimatedImage::GAIAnimatedImagePrivate::loadGIFrame(QIODevice *dev, int 
     dev->read(headerBytes.data(), sizeof(GIFrameHeader));
     image = std::bit_cast<GIFrameHeader>(headerBytes);
 
-    if (image.type != 5)
+    if (image.type != 5 || image.layerCount == 0)
+    {
+        frames[i] = QByteArray();
+        offsets[i] = QPoint();
+        return;
+    }
+
+    // Bound the layer count by the data actually available so a corrupt header
+    // cannot trigger an enormous allocation.
+    const qint64 maxLayers = dev->bytesAvailable() / static_cast<qint64>(sizeof(GILayerHeader)) + 1;
+    if (static_cast<qint64>(image.layerCount) > maxLayers)
     {
         frames[i] = QByteArray();
         offsets[i] = QPoint();

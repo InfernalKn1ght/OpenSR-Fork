@@ -102,6 +102,13 @@ void Music::play()
 
 void Music::queue()
 {
+    // No decoder: nothing to stream. Guards against a timer tick arriving
+    // after a failed resetDecoding() left m_decoder null.
+    if (!m_decoder)
+    {
+        return;
+    }
+
     ALint doneBuffers = 0;
     alGetSourcei(m_alSource, AL_BUFFERS_PROCESSED, &doneBuffers);
 
@@ -169,12 +176,30 @@ void Music::queue()
 void Music::resetDecoding()
 {
     stop();
+
+    // The source is stopped, so every queued buffer is now "processed" and can
+    // be reclaimed; the previous decoder's audio must not linger.
+    ALint queued = 0;
+    alGetSourcei(m_alSource, AL_BUFFERS_QUEUED, &queued);
+    while (queued-- > 0)
+    {
+        ALuint buffer = 0;
+        alSourceUnqueueBuffers(m_alSource, 1, &buffer);
+    }
+    m_freeBuffers = BUFFER_COUNT;
+
     if (m_decoder)
     {
         delete m_decoder;
         m_decoder = 0;
     }
-    m_decoder = ((Engine *)qApp)->sound()->getMusicDecoder(m_source, this);
+    Engine *engine = dynamic_cast<Engine *>(qApp);
+    if (!engine)
+    {
+        return;
+    }
+
+    m_decoder = engine->sound()->getMusicDecoder(m_source, this);
 
     if (!m_decoder)
     {
@@ -187,8 +212,6 @@ void Music::resetDecoding()
         m_decoder = 0;
         return;
     }
-
-    m_freeBuffers = BUFFER_COUNT;
 
     for (int i = 0; i < BUFFER_COUNT; i++)
     {

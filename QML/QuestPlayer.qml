@@ -1,5 +1,5 @@
 import QtQuick 2.3
-import QtQuick.Controls 1.3
+import QtQuick.Controls
 import OpenSR 1.0
 
 Item {
@@ -61,8 +61,8 @@ Item {
     
     BorderImage {
         source: "res:/DATA/FormPQuest2/2S" + d.currentSkin + ".gi"
-        width: implicitWidth + background.width - background.implicitWidth
-        height: implicitHeight + background.height - background.implicitHeight
+        width: implicitWidth + backgroundImage.width - backgroundImage.implicitWidth
+        height: implicitHeight + backgroundImage.height - backgroundImage.implicitHeight
         
         border.left: 30
         border.top: 505
@@ -76,7 +76,7 @@ Item {
     }
     
     BorderImage {
-        id: background
+        id: backgroundImage
         source: "res:/DATA/FormPQuest2/2BG.gi"
         
         border.top: 490
@@ -135,16 +135,16 @@ Item {
     }
     ScrollView {    
         id: textScroll
-        width: 550 + background.width - background.implicitWidth
+        width: 550 + backgroundImage.width - backgroundImage.implicitWidth
         height: 365
-        style: Qt.createComponent("res:/ORC/PlanetQuest/ScrollBarS1.qml")
+        clip: true
         
         Text {
             id: textView
             color: d.skinTextColor
             textFormat: Text.RichText
-            width: 512 + background.width - background.implicitWidth
-            wrapMode: TextEdit.WordWrap            
+            width: 512 + backgroundImage.width - backgroundImage.implicitWidth
+            wrapMode: Text.WordWrap            
         }
         anchors.left: parent.left
         anchors.top: parent.top
@@ -154,9 +154,9 @@ Item {
     
     ScrollView {    
         id: answersScroll
-        width: 567 + background.width - background.implicitWidth
-        height: 217 + background.height - background.implicitHeight
-        style: Qt.createComponent("res:/ORC/PlanetQuest/ScrollBarS1.qml")
+        width: 567 + backgroundImage.width - backgroundImage.implicitWidth
+        height: 217 + backgroundImage.height - backgroundImage.implicitHeight
+        clip: true
         
         ListView {
             id: transitonsList
@@ -184,11 +184,11 @@ Item {
                     }
                     Text { 
                         id: transTitle
-                        width: 500 + background.width - background.implicitWidth
+                        width: 500 + backgroundImage.width - backgroundImage.implicitWidth
                         text: title 
                         color: model.enabled ? d.skinTextColor : "#808080"
                         textFormat: Text.RichText
-                        wrapMode: TextEdit.WordWrap  
+                        wrapMode: Text.WordWrap  
                         
                         anchors.left: answerImg.right
                         anchors.leftMargin: 5
@@ -308,8 +308,6 @@ Item {
             d.skinTextColor = "#000000";
             d.skinSelectionColor = "#0000AD";
         }
-        textScroll.style = Qt.createComponent("res:/ORC/PlanetQuest/ScrollBarS" + number + ".qml")
-        answersScroll.style = Qt.createComponent("res:/ORC/PlanetQuest/ScrollBarS" + number + ".qml")
         player.onCurrentTextChanged()
     }
     

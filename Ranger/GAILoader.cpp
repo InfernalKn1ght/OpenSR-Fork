@@ -18,6 +18,7 @@
 
 #include <OpenSR/libRangerQt.h>
 #include <QBuffer>
+#include <cstring>
 
 namespace OpenSR
 {
@@ -43,29 +44,73 @@ QVector<int> loadGAITimes(QIODevice *dev, const GAIHeader &header)
         return times;
     }
 
-    uint8_t *waitData = new uint8_t[header.waitSize];
-    dev->seek(header.waitSeek);
-    dev->read((char *)waitData, header.waitSize);
-
-    uint32_t timeBlockCount = *((uint32_t *)waitData);
-    uint8_t *p = waitData + 4 + static_cast<size_t>(timeBlockCount * 8) + 2;
-
-    for (int i = 0; i < timeBlockCount; i++)
+    // Reject a corrupt wait block before allocating/reading it.
+    if (dev->size() > 0 && static_cast<qint64>(header.waitSize) > dev->size())
     {
-        uint32_t blockFrameCount = *((uint32_t *)p);
-        for (int j = 0; j < blockFrameCount; j++)
+        return times;
+    }
+
+    QByteArray waitData(static_cast<qsizetype>(header.waitSize), Qt::Uninitialized);
+    dev->seek(header.waitSeek);
+    const qint64 bytesRead = dev->read(waitData.data(), waitData.size());
+    if (bytesRead <= 0)
+    {
+        return times;
+    }
+    waitData.resize(bytesRead);
+
+    const char *base = waitData.constData();
+    const qsizetype size = waitData.size();
+
+    if (size < 6)
+    {
+        return times;
+    }
+
+    const auto readU32 = [](const char *p) {
+        uint32_t value = 0;
+        std::memcpy(&value, p, sizeof(value));
+        return value;
+    };
+
+    const uint32_t timeBlockCount = readU32(base);
+
+    // The block-offset table must lie entirely inside the wait block.
+    if (static_cast<qsizetype>(timeBlockCount) * 8 + 6 > size)
+    {
+        return times;
+    }
+
+    const char *p = base + 4 + static_cast<qsizetype>(timeBlockCount) * 8 + 2;
+
+    for (uint32_t i = 0; i < timeBlockCount; i++)
+    {
+        if (p + 4 > base + size)
         {
-            uint32_t frame = *((uint32_t *)(p + 4 + static_cast<ptrdiff_t>(j * 8)));
-            uint32_t time = *((uint32_t *)(p + 4 + static_cast<ptrdiff_t>(j * 8) + 4));
+            break;
+        }
+
+        const uint32_t blockFrameCount = readU32(p);
+
+        // Every frame record is 8 bytes and must stay inside the block.
+        if (p + 4 + static_cast<qsizetype>(blockFrameCount) * 8 > base + size)
+        {
+            break;
+        }
+
+        for (uint32_t j = 0; j < blockFrameCount; j++)
+        {
+            const uint32_t frame = readU32(p + 4 + static_cast<qsizetype>(j) * 8);
+            const uint32_t time = readU32(p + 4 + static_cast<qsizetype>(j) * 8 + 4);
             if (frame < header.frameCount)
             {
                 times[frame] = static_cast<int>(time);
             }
         }
-        p += blockFrameCount * 8 + 4 + 2;
+
+        p += static_cast<qsizetype>(blockFrameCount) * 8 + 4 + 2;
     }
 
-    delete[] waitData;
     return times;
 }
 

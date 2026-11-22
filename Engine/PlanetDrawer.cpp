@@ -116,6 +116,28 @@ static const QString VERTEX_SHADER = "attribute vec3 vPosition;\n"
                                      "    texCoord = vTexCoord;\n"
                                      "}\n";
 
+// Load an image through the engine's resource manager. Returns a null QImage
+// (instead of dereferencing a null qApp) when the engine is unavailable.
+QImage loadResourceImage(const QUrl &url)
+{
+    Engine *engine = dynamic_cast<Engine *>(qApp);
+    if (!engine)
+    {
+        return QImage();
+    }
+
+    QIODevice *imgDev = engine->resources()->getIODevice(url);
+    if (!imgDev)
+    {
+        return QImage();
+    }
+
+    QImageReader reader(imgDev);
+    QImage image = reader.read();
+    delete imgDev;
+    return image;
+}
+
 class PlanetRenderer : public QQuickFramebufferObject::Renderer
 {
     struct Vertex
@@ -328,45 +350,24 @@ private:
     // !!! Called from GUI thread
     void updateSurface(const QUrl &surface)
     {
-        surfaceImage = QImage();
         // TODO: make async
-        QIODevice *imgDev = dynamic_cast<Engine *>(qApp)->resources()->getIODevice(surface);
-        if (imgDev)
-        {
-            QImageReader reader(imgDev);
-            surfaceImage = reader.read();
-            delete imgDev;
-        }
+        surfaceImage = loadResourceImage(surface);
         surfaceUpdated = true;
     }
 
     // !!! Called from GUI thread
     void updateCloud0(const QUrl cloud0)
     {
-        cloud0Image = QImage();
         // TODO: make async
-        QIODevice *imgDev = dynamic_cast<Engine *>(qApp)->resources()->getIODevice(cloud0);
-        if (imgDev)
-        {
-            QImageReader reader(imgDev);
-            cloud0Image = reader.read();
-            delete imgDev;
-        }
+        cloud0Image = loadResourceImage(cloud0);
         cloud0Updated = true;
     }
 
     // !!! Called from GUI thread
     void updateCloud1(const QUrl cloud1)
     {
-        cloud1Image = QImage();
         // TODO: make async
-        QIODevice *imgDev = dynamic_cast<Engine *>(qApp)->resources()->getIODevice(cloud1);
-        if (imgDev)
-        {
-            QImageReader reader(imgDev);
-            cloud1Image = reader.read();
-            delete imgDev;
-        }
+        cloud1Image = loadResourceImage(cloud1);
         cloud1Updated = true;
     }
 };

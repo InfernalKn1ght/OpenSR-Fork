@@ -26,21 +26,14 @@ namespace
 {
 QString readWideString(QIODevice *dev)
 {
-    wchar_t c = 0;
     QString result;
+    char16_t c = 0;
 
-    dev->read((char *)&c, 2);
-    if (c != 0)
+    // Stop on the terminating null or on EOF; without the read-length check a
+    // truncated file would loop forever appending null characters.
+    while (dev->read((char *)&c, 2) == 2 && c != 0)
     {
         result.append(QChar(c));
-    }
-    while (c != 0)
-    {
-        dev->read((char *)&c, 2);
-        if (c != 0)
-        {
-            result.append(QChar(c));
-        }
     }
 
     return result;
@@ -153,6 +146,18 @@ void readDATTree(QIODevice *dev, QVariantMap *parent, bool isCache)
     }
     dev->read((char *)&count, 4);
 
+    // Guard against a corrupt/huge count: every entry needs at least 11 bytes
+    // (index, arrayCount, isText and a 2-byte string terminator), so a bogus
+    // count must not make us spin for billions of iterations.
+    if (!dev->isSequential())
+    {
+        const qint64 maxEntries = dev->bytesAvailable() / 11 + 1;
+        if (static_cast<qint64>(count) > maxEntries)
+        {
+            count = static_cast<uint32_t>(maxEntries);
+        }
+    }
+
     if (isTree)
     {
         QVariantList l;
@@ -186,11 +191,11 @@ void readDATTree(QIODevice *dev, QVariantMap *parent, bool isCache)
                 currentName = name;
                 l.push_back(value);
             }
-            else if ((arrayCount == 0) && (index < currentCount - 1))
+            else if ((arrayCount == 0) && (currentCount > 0) && (index < currentCount - 1))
             {
                 l.push_back(value);
             }
-            else if ((arrayCount == 0) && (index == currentCount - 1))
+            else if ((arrayCount == 0) && (currentCount > 0) && (index == currentCount - 1))
             {
                 l.push_back(value);
 

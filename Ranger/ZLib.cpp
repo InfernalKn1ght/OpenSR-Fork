@@ -30,6 +30,12 @@ namespace OpenSR
  */
 QByteArray unpackZL(QByteArray &src)
 {
+    // Signature plus uncompressed size: anything shorter is truncated/corrupt.
+    if (src.size() < 8)
+    {
+        return QByteArray();
+    }
+
     uint32_t sig = ((uint32_t *)src.constData())[0];
     uint32_t outsize = ((uint32_t *)src.constData())[1];
 

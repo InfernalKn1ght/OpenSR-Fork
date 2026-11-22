@@ -118,7 +118,7 @@ bool ResourceManager::save(QDataStream &stream) const
         return false;
     }
 
-    stream << m_resources.count();
+    stream << static_cast<quint32>(m_resources.count());
     for (auto r : m_resources)
     {
         stream << r;
@@ -140,10 +140,10 @@ bool ResourceManager::load(QDataStream &stream, const QMap<quint32, WorldObject 
 
     m_resources.clear();
 
-    int count{};
+    quint32 count{};
     stream >> count;
 
-    for (int i = 0; i < count; i++)
+    for (quint32 i = 0; i < count; i++)
     {
         Resource res;
         stream >> res;
@@ -153,7 +153,14 @@ bool ResourceManager::load(QDataStream &stream, const QMap<quint32, WorldObject 
             return false;
         }
 
-        registerResource(res);
+        quint32 id = registerResource(res);
+
+        // Keep the id pool ahead of every loaded resource id so newly
+        // registered resources do not overwrite loaded ones.
+        if (id > m_idPool)
+        {
+            m_idPool = id;
+        }
     }
 
     return stream.status() == QDataStream::Ok;
